@@ -8,11 +8,17 @@ import (
 	"syscall"
 
 	"github.com/justyntemme/gobolt/server"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
+	logger := logrus.New()
+	logger.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
+	logger.SetLevel(logrus.InfoLevel)
+
+	logger.Info("Creating new Server")
 	// Start the server in a separate goroutine
-	srv := server.NewServer(":80")
+	srv := server.NewServer(":8080")
 	go func() {
 		if err := srv.Start(); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Error starting server: %v\n", err)

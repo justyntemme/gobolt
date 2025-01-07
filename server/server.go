@@ -4,24 +4,83 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
+// ServerConfig holds configuration values for the server.
+type ServerConfig struct {
+	BaseDir string // The base directory to serve content from
+	Logger  *logrus.Logger
+}
+
 type Server struct {
+	ServerConfig
 	httpServer *http.Server
 }
 
-// NewServer creates a new Server instance.
 func NewServer(port string) *Server {
 	return &Server{
+		ServerConfig: ServerConfig{
+			BaseDir: "./content",
+			Logger:  logrus.New(),
+		},
 		httpServer: &http.Server{
 			Addr: port,
 		},
 	}
 }
 
+// registerRoutes sets up the routes and their handlers.
+func (s *Server) registerRoutes() {
+	http.HandleFunc("/content/", func(w http.ResponseWriter, r *http.Request) {
+		s.handleContent(w, r) // Call the method using the receiver
+	})
+	// http.HandleFunc("/search", handleSearch)
+}
+
+func (s *Server) getSafeFilePath(path string) (string, error) {
+	cleanPath := filepath.Clean(path)
+
+	absPath := filepath.Join(s.ServerConfig.BaseDir, cleanPath)
+
+	absBaseDir, err := filepath.Abs(s.ServerConfig.BaseDir)
+	if err != nil {
+		return "", fmt.Errorf("Error resolving base directory")
+	}
+	absFilePath, err := filepath.Abs(absPath)
+	if err != nil {
+		return "", fmt.Errorf("Error resolving requested file path")
+	}
+	if !strings.HasPrefix(absFilePath, absBaseDir) {
+		return "", fmt.Errorf("Forbidden: Access outside of the base directory is not allowed")
+	}
+
+	return absFilePath, nil
+}
+
+func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
+	startTime := time.Now()
+
+	path := strings.TrimPrefix(r.URL.Path, "/content/`")
+
+	filePath, err := s.getSafeFilePath(path)
+	if err != nil {
+		s.Logger.Warn("Error with request %s", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	duration := time.Since(startTime)
+	s.ServerConfig.Logger.Info("Request processed in %s for path: %s with filepath %s", duration, r.URL.Path, filePath)
+}
+
 func (s *Server) Start() error {
 	// Register routes
-	registerRoutes()
+	s.registerRoutes()
 
 	fmt.Printf("Server listening on http://localhost%s\n", s.httpServer.Addr)
 	return s.httpServer.ListenAndServe()
