@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/justyntemme/gobolt/dom"
 	"github.com/justyntemme/gobolt/server"
 	"github.com/sirupsen/logrus"
 )
@@ -15,10 +17,21 @@ func main() {
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 	logger.SetLevel(logrus.InfoLevel)
+	baseDir := "./content" // TODO make this an argument to the binary
 
+	logger.Info("Starting Loader")
+	domInstance := dom.NewDOM()
+
+	// Load the Markdown content into the DOM (pass in the base directory)
+	err := domInstance.LoadMarkdown(baseDir)
+	if err != nil {
+		log.Fatalf("Error loading markdown content: %v", err)
+	}
+
+	logger.Info("DOM loaded successfully.")
 	logger.Info("Creating new Server")
 	// Start the server in a separate goroutine
-	srv := server.NewServer(":8080")
+	srv := server.NewServer(":8080", domInstance)
 	go func() {
 		if err := srv.Start(); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Error starting server: %v\n", err)

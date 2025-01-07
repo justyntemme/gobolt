@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/justyntemme/gobolt/dom"
 	"github.com/sirupsen/logrus"
 )
 
@@ -15,6 +16,7 @@ import (
 type ServerConfig struct {
 	BaseDir string // The base directory to serve content from
 	Logger  *logrus.Logger
+	DOM     *dom.DOM
 }
 
 type Server struct {
@@ -22,11 +24,12 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func NewServer(port string) *Server {
+func NewServer(port string, dom *dom.DOM) *Server {
 	return &Server{
 		ServerConfig: ServerConfig{
 			BaseDir: "./content",
 			Logger:  logrus.New(),
+			DOM:     dom,
 		},
 		httpServer: &http.Server{
 			Addr: port,
