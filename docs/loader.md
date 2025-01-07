@@ -17,9 +17,9 @@ The primary purpose of the `LoadMarkdown` function is to:
 ## Function Signature
 
 ````go
-```go
-func (d *DOM) LoadMarkdown(baseDir string) error
-```
+`func (d *DOM) LoadMarkdown(baseDir string) error`
+
+
 #### Parameters:
 - `baseDir`: A string representing the directory to walk through in order to find `.md` files.
 
