@@ -8,7 +8,7 @@ import (
 // Start initializes and starts the HTTP server.
 func Start(port string) error {
 	// Register routes
-	// registerRoutes()
+	registerRoutes()
 
 	// Start the HTTP server
 	fmt.Printf("Server listening on http://localhost%s\n", port)

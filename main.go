@@ -1,11 +1,9 @@
 package main
 
 import (
-	"fmt"
-
-	"github.comjustyntemme/gobolt/pool"
+	"github.com/justyntemme/gobolt/server"
 )
 
 func main() {
-	fmt.Println(pool.ReturnHello)
+	server.Start("8080")
 }
