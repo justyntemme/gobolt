@@ -20,7 +20,7 @@ func main() {
 	baseDir := "./content" // TODO make this an argument to the binary
 
 	logger.Info("Starting Loader")
-	domInstance := dom.NewDOM()
+	domInstance := dom.NewDOM(logger)
 
 	// Load the Markdown content into the DOM (pass in the base directory)
 	err := domInstance.LoadMarkdown(baseDir)

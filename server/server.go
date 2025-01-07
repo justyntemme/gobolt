@@ -80,10 +80,17 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	// INFO[0002] Recieved request at URI: /home
 	// INFO[0002] map[content/about:0x140001404a0 content/home:0x140001404c0]
 	// WARN[0002] File path not found for request: /Users/justyntemme/Documents/code/gobolt/content/home
-	page, exists := s.ServerConfig.DOM.Pages[filePath]
-	s.Logger.Info(s.ServerConfig.DOM.Pages)
+	// uri := strings.TrimPrefix(r.URL.Path, "/content")
+	uri := "content" + r.URL.Path
+	page, exists := s.ServerConfig.DOM.Pages[uri]
 	if !exists {
-		s.Logger.Warn("File path not found for request: ", filePath)
+		s.Logger.Warn("File path not found for request with uri: ", uri)
+		for uri, page := range s.ServerConfig.DOM.Pages {
+			s.Logger.Info("Found Page: ")
+			s.Logger.Infof("URI: %s", uri)
+			s.Logger.Infof("Markdown: %s", page.Markdown)
+			s.Logger.Infof("HTML: %s", page.HTML)
+		}
 		http.NotFound(w, r)
 		return
 	}
