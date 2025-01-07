@@ -31,9 +31,9 @@ func (d *DOM) LoadMarkdown(baseDir string) error {
 
 		if !info.IsDir() && strings.HasSuffix(info.Name(), ".md") {
 			// Generate URI from file path
-			uri := strings.TrimPrefix(path, baseDir)
-			uri = strings.TrimSuffix(uri, ".md")
-			uri = strings.ReplaceAll(uri, string(os.PathSeparator), "/")
+			uri := strings.TrimPrefix(path, baseDir)                     // Remove baseDir prefix
+			uri = strings.TrimSuffix(uri, ".md")                         // Remove file extension
+			uri = strings.ReplaceAll(uri, string(os.PathSeparator), "/") // Normalize slashes
 
 			// Log the filtered URI
 			d.Logger.Infof("Filtered URI: %s", uri)
@@ -49,9 +49,7 @@ func (d *DOM) LoadMarkdown(baseDir string) error {
 			d.Logger.Infof("Adding page to DOM with URI: %s", uri)
 
 			// Add the page to the DOM with its Markdown content
-			d.mu.Lock()
 			d.Pages[uri] = &Page{Markdown: string(content)}
-			d.mu.Unlock()
 
 			// Enqueue the URI for HTML generation
 			wg.Add(1)

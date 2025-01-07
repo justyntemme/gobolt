@@ -13,18 +13,23 @@ type Page struct {
 	HTML     string
 }
 
-// DOM represents a collection of pages.
 type DOM struct {
-	Pages  map[string]*Page
-	mu     sync.Mutex
-	Logger logrus.Logger // Assuming Logger is defined elsewhere
+	Pages           map[string]*Page
+	Logger          logrus.Logger // Assuming Logger is defined elsewhere
+	pagesUpdateChan chan pageUpdate
+}
+
+type pageUpdate struct {
+	uri     string
+	content string
 }
 
 // NewDOM creates a new DOM instance.
 func NewDOM(logger *logrus.Logger) *DOM {
 	return &DOM{
-		Pages:  make(map[string]*Page),
-		Logger: *logger,
+		Pages:           make(map[string]*Page),
+		Logger:          *logger,
+		pagesUpdateChan: make(chan pageUpdate, 10),
 	}
 }
 
@@ -34,10 +39,8 @@ func (d *DOM) htmlWorker(taskChan <-chan string, wg *sync.WaitGroup) {
 		// Log the URI being processed
 		d.Logger.Infof("Processing URI: %s", uri)
 
-		// Lock to safely access the Pages map
-		d.mu.Lock()
+		// Get the page from Pages map
 		page, exists := d.Pages[uri]
-		d.mu.Unlock()
 
 		if !exists {
 			d.Logger.Warnf("Page with URI %s does not exist in DOM", uri)
@@ -54,10 +57,8 @@ func (d *DOM) htmlWorker(taskChan <-chan string, wg *sync.WaitGroup) {
 		// Log after conversion is completed
 		d.Logger.Infof("Conversion complete for URI: %s", uri)
 
-		// Lock to safely write the HTML back into the DOM
-		d.mu.Lock()
+		// Update the HTML field of the page
 		page.HTML = string(html)
-		d.mu.Unlock()
 
 		// Log when HTML is successfully written to the Page
 		d.Logger.Infof("HTML written to DOM for URI: %s", uri)
