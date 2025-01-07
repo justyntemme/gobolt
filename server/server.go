@@ -39,7 +39,7 @@ func NewServer(port string, dom *dom.DOM) *Server {
 
 // registerRoutes sets up the routes and their handlers.
 func (s *Server) registerRoutes() {
-	http.HandleFunc("/content/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		s.handleContent(w, r) // Call the method using the receiver
 	})
 	// http.HandleFunc("/search", handleSearch)
@@ -67,18 +67,34 @@ func (s *Server) getSafeFilePath(path string) (string, error) {
 
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
-
+	s.Logger.Info("Recieved request at URI: ", r.URL)
 	path := strings.TrimPrefix(r.URL.Path, "/content/`")
 
 	filePath, err := s.getSafeFilePath(path)
 	if err != nil {
-		s.Logger.Warn("Error with request %s", err)
+		s.Logger.Warn("Error with request", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
+	// TODO implement the ability to correctly grab the right content markdown
+	// INFO[0002] Recieved request at URI: /home
+	// INFO[0002] map[content/about:0x140001404a0 content/home:0x140001404c0]
+	// WARN[0002] File path not found for request: /Users/justyntemme/Documents/code/gobolt/content/home
+	page, exists := s.ServerConfig.DOM.Pages[filePath]
+	s.Logger.Info(s.ServerConfig.DOM.Pages)
+	if !exists {
+		s.Logger.Warn("File path not found for request: ", filePath)
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprintln(w, page.HTML)
 	duration := time.Since(startTime)
-	s.ServerConfig.Logger.Info("Request processed in %s for path: %s with filepath %s", duration, r.URL.Path, filePath)
+	s.ServerConfig.Logger.Info(
+		"Request processed in %s for path: %s with filepath %s",
+		duration,
+		r.URL.Path,
+		filePath)
 }
 
 func (s *Server) Start() error {
