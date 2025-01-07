@@ -31,10 +31,10 @@ The primary purpose of the `LoadMarkdown` function is to:
 1. **Initializing Channels and WaitGroup**:
     The function starts by setting up a buffered channel (`taskChan`) that will be used to pass the URIs of Markdown files for HTML processing. It also initializes a `sync.WaitGroup` (`wg`) to manage the completion of tasks.
 
-    ```go
+<code>
     taskChan := make(chan string, 10) // Buffered channel
     wg := &sync.WaitGroup{}
-    ```
+<code>
 
 2. **Starting Worker Goroutines**:
     A pool of worker goroutines is launched, where each goroutine listens for URIs from the `taskChan` channel. These workers will process the Markdown content and generate the HTML. A total of 4 workers are created by default.
