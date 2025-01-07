@@ -76,11 +76,7 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// TODO implement the ability to correctly grab the right content markdown
-	// INFO[0002] Recieved request at URI: /home
-	// INFO[0002] map[content/about:0x140001404a0 content/home:0x140001404c0]
-	// WARN[0002] File path not found for request: /Users/justyntemme/Documents/code/gobolt/content/home
-	// uri := strings.TrimPrefix(r.URL.Path, "/content")
+
 	uri := "content" + r.URL.Path
 	page, exists := s.ServerConfig.DOM.Pages[uri]
 	if !exists {
@@ -97,7 +93,7 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprintln(w, page.HTML)
 	duration := time.Since(startTime)
-	s.ServerConfig.Logger.Info(
+	s.ServerConfig.Logger.Infof(
 		"Request processed in %s for path: %s with filepath %s",
 		duration,
 		r.URL.Path,
