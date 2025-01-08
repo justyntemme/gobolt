@@ -29,12 +29,3 @@ func LoadCSS(filePath string) {
 func GetThemeCSS() string {
 	return cssContent
 }
-
-func main() {
-	// Load the CSS file at startup
-	LoadCSS("styles.css")
-
-	// Retrieve the CSS content
-	fmt.Println(getThemeCSS())
-}
-
