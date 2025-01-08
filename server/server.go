@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -14,35 +15,46 @@ import (
 
 // ServerConfig holds configuration values for the server.
 type ServerConfig struct {
-	BaseDir string // The base directory to serve content from
-	Logger  *logrus.Logger
-	DOM     *dom.DOM
+	BaseDir  string // The base directory to serve content from
+	Logger   *logrus.Logger
+	DOM      *dom.DOM
+	Hostname string
 }
 
 type Server struct {
 	ServerConfig
 	httpServer *http.Server
+	mux        *http.ServeMux
 }
 
 func NewServer(port string, dom *dom.DOM) *Server {
+	mux := http.NewServeMux()
+	// TODO add config package to read yaml files or params for ServerConfig Values
 	return &Server{
 		ServerConfig: ServerConfig{
-			BaseDir: "./content",
-			Logger:  logrus.New(),
-			DOM:     dom,
+			BaseDir:  "./content",
+			Logger:   logrus.New(),
+			DOM:      dom,
+			Hostname: "localhost",
 		},
+		mux: mux,
 		httpServer: &http.Server{
-			Addr: port,
+			Addr:    port,
+			Handler: mux,
 		},
 	}
 }
 
 // registerRoutes sets up the routes and their handlers.
 func (s *Server) registerRoutes() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		s.handleContent(w, r) // Call the method using the receiver
 	})
-	// http.HandleFunc("/search", handleSearch)
+
+	// Example: Add a custom route for serving CSS
+	s.mux.HandleFunc("/css", func(w http.ResponseWriter, r *http.Request) {
+		s.handleCSS(w, r) // Serve CSS content
+	})
 }
 
 func (s *Server) getSafeFilePath(path string) (string, error) {
@@ -65,9 +77,26 @@ func (s *Server) getSafeFilePath(path string) (string, error) {
 	return absFilePath, nil
 }
 
+func (s *Server) handleCSS(w http.ResponseWriter, r *http.Request) {
+	CSS := dom.GetThemeCSS()
+	w.Header().Set("Content-Type", "text/css; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, err := io.WriteString(w, CSS)
+	if err != nil {
+		http.Error(w, "failed to write response", http.StatusInternalServerError)
+	}
+}
+
+// writeCSSImport dynamically writes the CSS import statement to the provided writer.
+func writeCSSImport(w io.Writer, hostname string) error {
+	_, err := fmt.Fprintf(w, `<html><head><link rel="stylesheet" type="text/css" href="http://%s/css"></head><body>`, hostname)
+	return err
+}
+
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 	s.Logger.Info("Recieved request at URI: ", r.URL)
+	writeCSSImport(w, "localhost")
 	path := strings.TrimPrefix(r.URL.Path, "/content/`")
 
 	filePath, err := s.getSafeFilePath(path)
@@ -92,6 +121,8 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprintln(w, page.HTML)
+	s.Logger.Debug(page.HTML)
+	fmt.Fprintln(w, "</body></html>")
 	duration := time.Since(startTime)
 	s.ServerConfig.Logger.Infof(
 		"Request processed in %s for path: %s with filepath %s",
@@ -115,4 +146,4 @@ func (s *Server) Shutdown() error {
 }
 
 // Set a timeout for graceful shutdown
-const shutdownTimeout = 5 // seconds
+const shutdownTimeout = 5 * time.Second // seconds

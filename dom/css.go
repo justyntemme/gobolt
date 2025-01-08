@@ -25,11 +25,11 @@ func LoadCSS(filePath string) {
 }
 
 // GetThemeCSS returns the loaded CSS content as a string
-func getThemeCSS() string {
+
+func GetThemeCSS() string {
 	return cssContent
 }
 
-// Example usage
 func main() {
 	// Load the CSS file at startup
 	LoadCSS("styles.css")
@@ -37,3 +37,4 @@ func main() {
 	// Retrieve the CSS content
 	fmt.Println(getThemeCSS())
 }
+
