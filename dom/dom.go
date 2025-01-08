@@ -52,7 +52,10 @@ func (d *DOM) htmlWorker(taskChan <-chan string, wg *sync.WaitGroup) {
 		d.Logger.Infof("Converting Markdown to HTML for URI: %s", uri)
 
 		// Convert Markdown to HTML
-		html := markdown.ToHTML([]byte(page.Markdown), nil, nil)
+		// Using default renderer
+		// html := markdown.ToHTML([]byte(page.Markdown), nil, nil)
+		renderer := newCustomizedRender()
+		html := markdown.ToHTML([]byte(page.Markdown), nil, renderer)
 
 		// Log after conversion is completed
 		d.Logger.Infof("Conversion complete for URI: %s", uri)
