@@ -16,7 +16,7 @@ import (
 func main() {
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
-	logger.SetLevel(logrus.InfoLevel)
+	logger.SetLevel(logrus.DebugLevel)
 	baseDir := "./content" // TODO make this an argument to the binary
 
 	logger.Info("Starting Loader")

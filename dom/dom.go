@@ -55,6 +55,7 @@ func (d *DOM) htmlWorker(taskChan <-chan string, wg *sync.WaitGroup) {
 		// Using default renderer
 		// html := markdown.ToHTML([]byte(page.Markdown), nil, nil)
 		renderer := newCustomizedRender()
+		d.Logger.Debug(renderer.Opts.CSS)
 		html := markdown.ToHTML([]byte(page.Markdown), nil, renderer)
 
 		// Log after conversion is completed
