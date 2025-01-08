@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -22,27 +23,35 @@ type ServerConfig struct {
 type Server struct {
 	ServerConfig
 	httpServer *http.Server
+	mux        *http.ServeMux
 }
 
 func NewServer(port string, dom *dom.DOM) *Server {
+	mux := http.NewServeMux()
 	return &Server{
 		ServerConfig: ServerConfig{
 			BaseDir: "./content",
 			Logger:  logrus.New(),
 			DOM:     dom,
 		},
+		mux: mux,
 		httpServer: &http.Server{
-			Addr: port,
+			Addr:    port,
+			Handler: mux,
 		},
 	}
 }
 
 // registerRoutes sets up the routes and their handlers.
 func (s *Server) registerRoutes() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		s.handleContent(w, r) // Call the method using the receiver
 	})
-	// http.HandleFunc("/search", handleSearch)
+
+	// Example: Add a custom route for serving CSS
+	s.mux.HandleFunc("/css", func(w http.ResponseWriter, r *http.Request) {
+		s.handleCSS(w, r) // Serve CSS content
+	})
 }
 
 func (s *Server) getSafeFilePath(path string) (string, error) {
@@ -63,6 +72,16 @@ func (s *Server) getSafeFilePath(path string) (string, error) {
 	}
 
 	return absFilePath, nil
+}
+
+func (s *Server) handleCSS(w http.ResponseWriter, r *http.Request) {
+	CSS := dom.GetThemeCSS()
+	w.Header().Set("Content-Type", "text/css; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, err := io.WriteString(w, CSS)
+	if err != nil {
+		http.Error(w, "failed to write response", http.StatusInternalServerError)
+	}
 }
 
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
@@ -115,4 +134,4 @@ func (s *Server) Shutdown() error {
 }
 
 // Set a timeout for graceful shutdown
-const shutdownTimeout = 5 // seconds
+const shutdownTimeout = 5 * time.Second // seconds
