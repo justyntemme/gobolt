@@ -91,7 +91,7 @@ func (s *Server) handleCSS(w http.ResponseWriter, r *http.Request) {
 
 // writeCSSImport dynamically writes the CSS import statement to the provided writer.
 func writeCSSImport(w io.Writer, hostname string) error {
-	_, err := fmt.Fprintf(w, `<html><head><link rel="stylesheet" type="text/css" href="http://%s/css"></head><body>`, hostname)
+	_, err := fmt.Fprintf(w, `<!doctype html><html lang="en"><head><link rel="stylesheet" type="text/css" href="http://%s/css"></head><body>`, hostname)
 	return err
 }
 
