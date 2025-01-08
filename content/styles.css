@@ -1,0 +1,8 @@
+.paragraph {
+    display: flex; /* Use flexbox for alignment */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    text-align: center; /* Align text in the center */
+    height: 100%; /* Optional: Set a height if necessary */
+    margin: auto; /* Optional: Center within parent if height/width are set */
+}
