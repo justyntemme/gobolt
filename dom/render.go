@@ -16,7 +16,7 @@ type Paragraph struct {
 func renderParagraph(w io.Writer, p *ast.Paragraph, entering bool) {
 	if entering {
 		io.WriteString(w, `<div class="paragraph"<p>`)
-		io.WriteString(w, string(p.Content))
+		io.Writer.Write(w, p.Content)
 	} else {
 		io.WriteString(w, "</p></div>")
 	}
