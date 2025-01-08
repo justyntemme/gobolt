@@ -15,9 +15,10 @@ type Paragraph struct {
 // an actual rendering of Paragraph is more complicated
 func renderParagraph(w io.Writer, p *ast.Paragraph, entering bool) {
 	if entering {
-		io.WriteString(w, "<div>")
+		io.WriteString(w, `<div class="paragraph"<p>`)
+		io.WriteString(w, string(p.Content))
 	} else {
-		io.WriteString(w, "</div>")
+		io.WriteString(w, "</p></div>")
 	}
 }
 
