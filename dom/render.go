@@ -24,7 +24,7 @@ func renderParagraph(w io.Writer, p *ast.Paragraph, entering bool) {
 
 func myRenderHook(w io.Writer, node ast.Node, entering bool) (ast.WalkStatus, bool) {
 	// renderHookLogger := logrus.New()
-	CSS := getThemeCSS()
+	CSS := GetThemeCSS()
 	io.WriteString(w, CSS)
 	// Paragraph Logic
 	if para, ok := node.(*ast.Paragraph); ok {
