@@ -15,9 +15,10 @@ import (
 
 // ServerConfig holds configuration values for the server.
 type ServerConfig struct {
-	BaseDir string // The base directory to serve content from
-	Logger  *logrus.Logger
-	DOM     *dom.DOM
+	BaseDir  string // The base directory to serve content from
+	Logger   *logrus.Logger
+	DOM      *dom.DOM
+	Hostname string
 }
 
 type Server struct {
@@ -28,11 +29,13 @@ type Server struct {
 
 func NewServer(port string, dom *dom.DOM) *Server {
 	mux := http.NewServeMux()
+	// TODO add config package to read yaml files or params for ServerConfig Values
 	return &Server{
 		ServerConfig: ServerConfig{
-			BaseDir: "./content",
-			Logger:  logrus.New(),
-			DOM:     dom,
+			BaseDir:  "./content",
+			Logger:   logrus.New(),
+			DOM:      dom,
+			Hostname: "localhost",
 		},
 		mux: mux,
 		httpServer: &http.Server{
@@ -84,9 +87,16 @@ func (s *Server) handleCSS(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// writeCSSImport dynamically writes the CSS import statement to the provided writer.
+func writeCSSImport(w io.Writer, hostname string) error {
+	_, err := fmt.Fprintf(w, `<html><head><link rel="stylesheet" type="text/css" href="http://%s/css"></head><body>`, hostname)
+	return err
+}
+
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 	s.Logger.Info("Recieved request at URI: ", r.URL)
+	writeCSSImport(w, "localhost")
 	path := strings.TrimPrefix(r.URL.Path, "/content/`")
 
 	filePath, err := s.getSafeFilePath(path)
@@ -111,6 +121,8 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprintln(w, page.HTML)
+	s.Logger.Debug(page.HTML)
+	fmt.Fprintln(w, "</body></html>")
 	duration := time.Since(startTime)
 	s.ServerConfig.Logger.Infof(
 		"Request processed in %s for path: %s with filepath %s",
