@@ -19,6 +19,7 @@ type ServerConfig struct {
 	Logger   *logrus.Logger
 	DOM      *dom.DOM
 	Hostname string
+	Port     string
 }
 
 type Server struct {
@@ -36,6 +37,7 @@ func NewServer(port string, dom *dom.DOM) *Server {
 			Logger:   logrus.New(),
 			DOM:      dom,
 			Hostname: "localhost",
+			Port:     port,
 		},
 		mux: mux,
 		httpServer: &http.Server{
@@ -60,18 +62,18 @@ func (s *Server) registerRoutes() {
 func (s *Server) getSafeFilePath(path string) (string, error) {
 	cleanPath := filepath.Clean(path)
 
-	absPath := filepath.Join(s.ServerConfig.BaseDir, cleanPath)
+	absPath := filepath.Join(s.BaseDir, cleanPath)
 
-	absBaseDir, err := filepath.Abs(s.ServerConfig.BaseDir)
+	absBaseDir, err := filepath.Abs(s.BaseDir)
 	if err != nil {
-		return "", fmt.Errorf("Error resolving base directory")
+		return "", fmt.Errorf("error resolving base directory")
 	}
 	absFilePath, err := filepath.Abs(absPath)
 	if err != nil {
-		return "", fmt.Errorf("Error resolving requested file path")
+		return "", fmt.Errorf("error resolving requested file path")
 	}
 	if !strings.HasPrefix(absFilePath, absBaseDir) {
-		return "", fmt.Errorf("Forbidden: Access outside of the base directory is not allowed")
+		return "", fmt.Errorf("forbidden: Access outside of the base directory is not allowed")
 	}
 
 	return absFilePath, nil
@@ -107,10 +109,10 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	uri := "content" + r.URL.Path
-	page, exists := s.ServerConfig.DOM.Pages[uri]
+	page, exists := s.DOM.Pages[uri]
 	if !exists {
 		s.Logger.Warn("File path not found for request with uri: ", uri)
-		for uri, page := range s.ServerConfig.DOM.Pages {
+		for uri, page := range s.DOM.Pages {
 			s.Logger.Info("Found Page: ")
 			s.Logger.Infof("URI: %s", uri)
 			s.Logger.Infof("Markdown: %s", page.Markdown)
@@ -124,7 +126,7 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	s.Logger.Debug(page.HTML)
 	fmt.Fprintln(w, "</body></html>")
 	duration := time.Since(startTime)
-	s.ServerConfig.Logger.Infof(
+	s.Logger.Infof(
 		"Request processed in %s for path: %s with filepath %s",
 		duration,
 		r.URL.Path,
