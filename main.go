@@ -31,7 +31,10 @@ func main() {
 	logger.Info("DOM loaded successfully.")
 	logger.Info("Creating new Server")
 	// Start the server in a separate goroutine
-	srv := server.NewServer(":80", domInstance)
+	srv, err := server.NewServer(domInstance)
+	if err != nil { // TODO format errors and have error types (perhaps errors package)
+		log.Fatal(err.Error())
+	}
 	BaseDir := srv.BaseDir
 	dom.LoadCSS(BaseDir + "/styles.css")
 	logger.Info("Loaded CSS at " + BaseDir + "/styles.css")

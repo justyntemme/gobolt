@@ -12,7 +12,7 @@ import (
 func LoadConfig() (*ServerConfig, error) {
 	// Define default values
 	defaultBaseDir := "./content"
-	defaultPort := "80"
+	defaultPort := ":80" // Port must have :
 
 	// Command-line flags
 	baseDir := flag.String("baseDir", defaultBaseDir, "Base directory for content")
