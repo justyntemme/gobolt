@@ -87,6 +87,7 @@ func (s *Server) handleCSS(w http.ResponseWriter, r *http.Request) {
 	_, err := io.WriteString(w, CSS)
 	if err != nil {
 		http.Error(w, "failed to write response", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -97,12 +98,13 @@ func writeCSSImport(w io.Writer, hostname string) error {
 }
 
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
-	startTime := time.Now()
+	// startTime := time.Now()
 	s.Logger.Info("Recieved request at URI: ", r.URL)
 	writeCSSImport(w, "localhost")
 	path := strings.TrimPrefix(r.URL.Path, "/content/`")
 
-	filePath, err := s.getSafeFilePath(path)
+	// filePath, err := s.getSafeFilePath(path)
+	_, err := s.getSafeFilePath(path)
 	if err != nil {
 		s.Logger.Warn("Error with request", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -112,26 +114,27 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	uri := "content" + r.URL.Path
 	page, exists := s.ServerConfig.DOM.Pages[uri]
 	if !exists {
-		s.Logger.Warn("File path not found for request with uri: ", uri)
+		/* s.Logger.Warn("File path not found for request with uri: ", uri)
 		for uri, page := range s.ServerConfig.DOM.Pages {
 			s.Logger.Info("Found Page: ")
 			s.Logger.Infof("URI: %s", uri)
 			s.Logger.Infof("Markdown: %s", page.Markdown)
 			s.Logger.Infof("HTML: %s", page.HTML)
 		}
+		*/
 		http.NotFound(w, r)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprintln(w, page.HTML)
-	s.Logger.Debug(page.HTML)
+	// s.Logger.Debug(page.HTML)
 	fmt.Fprintln(w, "</body></html>")
-	duration := time.Since(startTime)
+	/*duration := time.Since(startTime)
 	s.ServerConfig.Logger.Infof(
 		"Request processed in %s for path: %s with filepath %s",
 		duration,
 		r.URL.Path,
-		filePath)
+		filePath) */
 }
 
 func (s *Server) Start() error {
