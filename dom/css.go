@@ -25,9 +25,7 @@ func LoadCSS(filePath string) {
 }
 
 // GetThemeCSS returns the loaded CSS content as a string
+
 func GetThemeCSS() string {
 	return cssContent
 }
-
-// Example usage
-// Load the CSS file at startup

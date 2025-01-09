@@ -16,7 +16,7 @@ import (
 func main() {
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
-	logger.SetLevel(logrus.InfoLevel)
+	logger.SetLevel(logrus.DebugLevel)
 	baseDir := "./content" // TODO make this an argument to the binary
 
 	logger.Info("Starting Loader")
@@ -32,7 +32,6 @@ func main() {
 	logger.Info("Creating new Server")
 	// Start the server in a separate goroutine
 	srv := server.NewServer(":80", domInstance)
-	srv.Hostname = "localhost"
 	BaseDir := srv.BaseDir
 	dom.LoadCSS(BaseDir + "/styles.css")
 	logger.Info("Loaded CSS at " + BaseDir + "/styles.css")
