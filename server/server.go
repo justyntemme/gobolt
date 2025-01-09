@@ -39,8 +39,11 @@ func NewServer(port string, dom *dom.DOM) *Server {
 		},
 		mux: mux,
 		httpServer: &http.Server{
-			Addr:    port,
-			Handler: mux,
+			Addr:         port,
+			Handler:      mux,
+			ReadTimeout:  time.Second * 5,
+			WriteTimeout: time.Second * 5,
+			IdleTimeout:  time.Second * 5,
 		},
 	}
 }
