@@ -25,10 +25,9 @@ type pageUpdate struct {
 }
 
 // NewDOM creates a new DOM instance.
-func NewDOM(logger *logrus.Logger) *DOM {
+func NewDOM() *DOM {
 	return &DOM{
 		Pages:           make(map[string]*Page),
-		Logger:          *logger,
 		pagesUpdateChan: make(chan pageUpdate, 10),
 	}
 }
@@ -43,25 +42,23 @@ func (d *DOM) htmlWorker(taskChan <-chan string, wg *sync.WaitGroup) {
 		page, exists := d.Pages[uri]
 
 		if !exists {
-			d.Logger.Warnf("Page with URI %s does not exist in DOM", uri)
 			wg.Done()
 			continue
 		}
 
-		// Log before starting the conversion
-		d.Logger.Infof("Converting Markdown to HTML for URI: %s", uri)
+		// d.Logger.Infof("Converting Markdown to HTML for URI: %s", uri)
 
 		// Convert Markdown to HTML
 		html := markdown.ToHTML([]byte(page.Markdown), nil, nil)
 
 		// Log after conversion is completed
-		d.Logger.Infof("Conversion complete for URI: %s", uri)
+		// d.Logger.Infof("Conversion complete for URI: %s", uri)
 
 		// Update the HTML field of the page
 		page.HTML = string(html)
 
 		// Log when HTML is successfully written to the Page
-		d.Logger.Infof("HTML written to DOM for URI: %s", uri)
+		// d.Logger.Infof("HTML written to DOM for URI: %s", uri)
 
 		// Mark this task as complete
 		wg.Done()
