@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"github.com/gomarkdown/markdown"
-	"github.com/sirupsen/logrus"
 )
 
 // Page represents a single page with Markdown content and generated HTML.
@@ -15,7 +14,6 @@ type Page struct {
 
 type DOM struct {
 	Pages           map[string]*Page
-	Logger          logrus.Logger // Assuming Logger is defined elsewhere
 	pagesUpdateChan chan pageUpdate
 }
 
@@ -36,7 +34,7 @@ func NewDOM() *DOM {
 func (d *DOM) htmlWorker(taskChan <-chan string, wg *sync.WaitGroup) {
 	for uri := range taskChan {
 		// Log the URI being processed
-		d.Logger.Infof("Processing URI: %s", uri)
+		// d.Logger.Infof("Processing URI: %s", uri)
 
 		// Get the page from Pages map
 		page, exists := d.Pages[uri]
@@ -52,7 +50,7 @@ func (d *DOM) htmlWorker(taskChan <-chan string, wg *sync.WaitGroup) {
 		// Using default renderer
 		// html := markdown.ToHTML([]byte(page.Markdown), nil, nil)
 		renderer := newCustomizedRender()
-		d.Logger.Debug(renderer.Opts.CSS)
+		// d.Logger.Debug(renderer.Opts.CSS)
 		html := markdown.ToHTML([]byte(page.Markdown), nil, renderer)
 
 		// Log after conversion is completed

@@ -10,13 +10,11 @@ import (
 	"time"
 
 	"github.com/justyntemme/gobolt/dom"
-	"github.com/sirupsen/logrus"
 )
 
 // ServerConfig holds configuration values for the server.
 type ServerConfig struct {
 	BaseDir  string // The base directory to serve content from
-	Logger   *logrus.Logger
 	DOM      *dom.DOM
 	Hostname string
 	Port     string
@@ -34,7 +32,6 @@ func NewServer(port string, dom *dom.DOM) *Server {
 	return &Server{
 		ServerConfig: ServerConfig{
 			BaseDir:  "./content",
-			Logger:   logrus.New(),
 			DOM:      dom,
 			Hostname: "localhost",
 			Port:     port,
@@ -101,14 +98,14 @@ func writeCSSImport(w io.Writer, hostname string) error {
 
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	// startTime := time.Now()
-	s.Logger.Info("Recieved request at URI: ", r.URL)
+	// s.Logger.Info("Recieved request at URI: ", r.URL)
 	writeCSSImport(w, "localhost")
 	path := strings.TrimPrefix(r.URL.Path, "/content/`")
 
 	// filePath, err := s.getSafeFilePath(path)
 	_, err := s.getSafeFilePath(path)
 	if err != nil {
-		s.Logger.Warn("Error with request", err)
+		// s.Logger.Warn("Error with request", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
