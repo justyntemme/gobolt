@@ -82,7 +82,7 @@ func (s *Server) getSafeFilePath(path string) (string, error) {
 	return absFilePath, nil
 }
 
-func (s *Server) handleCSS(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleCSS(w http.ResponseWriter, _ *http.Request) {
 	CSS := dom.GetThemeCSS()
 	w.Header().Set("Content-Type", "text/css; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
