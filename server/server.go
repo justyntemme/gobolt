@@ -175,9 +175,9 @@ func (s *Server) handleCSS(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func getCSSImportString(hostname string) string {
+func getCSSImportString(hostname string) template.HTML {
 	// Generate the CSS import statement as a string
-	return fmt.Sprintf(`<link rel="stylesheet" type="text/css" href="http://%s/css">`, hostname)
+	return template.HTML(fmt.Sprintf(`<link rel="stylesheet" type="text/css" href="http://%s/css">`, hostname))
 }
 
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
@@ -208,16 +208,19 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	cssImport := getCSSImportString(s.Hostname)
 
 	// w.Header().Set("Content-Type", "text/html")
 	data := struct {
-		CSSImport   string
+		CSSImport   template.HTML
 		Navigation  template.HTML
 		PageContent template.HTML
+		Hostname    string
 	}{
-		CSSImport:   getCSSImportString(s.Hostname),
+		CSSImport:   template.HTML(cssImport),
 		Navigation:  template.HTML(navigationHTML),
 		PageContent: template.HTML(page.HTML),
+		Hostname:    s.Hostname,
 	}
 
 	// Define or load the main template
@@ -227,7 +230,7 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>{{ .PageContent }}</title>
+		<title>{{ .Hostname }}</title>
 		{{ .CSSImport }}
 	</head>
 	<body>
