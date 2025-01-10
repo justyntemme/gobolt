@@ -26,25 +26,30 @@ type Server struct {
 	mux        *http.ServeMux
 }
 
-func NewServer(port string, dom *dom.DOM) *Server {
+func NewServer(dom *dom.DOM) (*Server, error) {
 	mux := http.NewServeMux()
 	// TODO add config package to read yaml files or params for ServerConfig Values
-	return &Server{
+	c, err := LoadConfig()
+	if err != nil {
+		return nil, err
+	}
+	s := &Server{
 		ServerConfig: ServerConfig{
-			BaseDir:  "./content",
+			BaseDir:  c.BaseDir,
 			DOM:      dom,
-			Hostname: "localhost",
-			Port:     port,
+			Hostname: c.Hostname,
+			Port:     c.Port,
 		},
 		mux: mux,
 		httpServer: &http.Server{
-			Addr:         port,
+			Addr:         c.Port,
 			Handler:      mux,
 			ReadTimeout:  time.Second * 5,
 			WriteTimeout: time.Second * 5,
 			IdleTimeout:  time.Second * 5,
 		},
 	}
+	return s, nil
 }
 
 // registerRoutes sets up the routes and their handlers.

@@ -14,29 +14,28 @@ import (
 )
 
 func main() {
-	logger := logrus.New()
-	logger.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
-	logger.SetLevel(logrus.DebugLevel)
-	baseDir := "./content" // TODO make this an argument to the binary
+	logger := &logrus.Logger{
+		Out:       os.Stdout,
+		Formatter: &logrus.TextFormatter{FullTimestamp: true},
+		Level:     logrus.DebugLevel,
+	}
 
-	logger.Info("Starting Loader")
 	domInstance := dom.NewDOM()
+	srv, err := server.NewServer(domInstance)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 
 	// Load the Markdown content into the DOM (pass in the base directory)
-	err := domInstance.LoadMarkdown(baseDir)
+	err = domInstance.LoadMarkdown(srv.BaseDir)
 	if err != nil {
 		log.Fatalf("Error loading markdown content: %v", err)
 	}
 
-	logger.Info("DOM loaded successfully.")
-	logger.Info("Creating new Server")
-	// Start the server in a separate goroutine
-	srv := server.NewServer(":80", domInstance)
-	BaseDir := srv.BaseDir
-	dom.LoadCSS(BaseDir + "/styles.css")
-	logger.Info("Loaded CSS at " + BaseDir + "/styles.css")
-	css := dom.GetThemeCSS()
-	logger.Debug(css)
+	err = dom.LoadCSS(srv.BaseDir + "/styles.css")
+	if err != nil {
+		logger.Fatalf("Unable to load css: error: %s", err)
+	}
 	go func() {
 		if err := srv.Start(); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Error starting server: %v\n", err)
@@ -48,8 +47,8 @@ func main() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit // Block until a signal is received
 
-	fmt.Println("\nShutting down server...")
+	logger.Info("\nShutting down server...")
 	if err := srv.Shutdown(); err != nil {
-		fmt.Printf("Error during shutdown: %v\n", err)
+		logger.Infof("Error during shutdown: %v\n", err)
 	}
 }
