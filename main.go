@@ -17,13 +17,15 @@ func main() {
 	logger := logrus.New()
 	logger.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 	logger.SetLevel(logrus.DebugLevel)
-	baseDir := "./content" // TODO make this an argument to the binary
 
 	logger.Info("Starting Loader")
 	domInstance := dom.NewDOM()
-
+	srv, err := server.NewServer(domInstance)
+	if err != nil { // TODO format errors and have error types (perhaps errors package)
+		log.Fatal(err.Error())
+	}
 	// Load the Markdown content into the DOM (pass in the base directory)
-	err := domInstance.LoadMarkdown(baseDir)
+	err = domInstance.LoadMarkdown(srv.BaseDir)
 	if err != nil {
 		log.Fatalf("Error loading markdown content: %v", err)
 	}
@@ -31,10 +33,7 @@ func main() {
 	logger.Info("DOM loaded successfully.")
 	logger.Info("Creating new Server")
 	// Start the server in a separate goroutine
-	srv, err := server.NewServer(domInstance)
-	if err != nil { // TODO format errors and have error types (perhaps errors package)
-		log.Fatal(err.Error())
-	}
+
 	BaseDir := srv.BaseDir
 	dom.LoadCSS(BaseDir + "/styles.css")
 	logger.Info("Loaded CSS at " + BaseDir + "/styles.css")
