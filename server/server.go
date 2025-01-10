@@ -104,11 +104,14 @@ func writeCSSImport(w io.Writer, hostname string) error {
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	// startTime := time.Now()
 	// s.Logger.Info("Recieved request at URI: ", r.URL)
-	writeCSSImport(w, "localhost")
-	path := strings.TrimPrefix(r.URL.Path, "/content/`")
+	err := writeCSSImport(w, s.Hostname) // TODO grab the hostname from server config
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	path := strings.TrimPrefix(r.URL.Path, "/"+s.BaseDir+"/`")
 
 	// filePath, err := s.getSafeFilePath(path)
-	_, err := s.getSafeFilePath(path)
+	_, err = s.getSafeFilePath(path)
 	if err != nil {
 		// s.Logger.Warn("Error with request", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
