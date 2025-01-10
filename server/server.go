@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"path/filepath"
@@ -97,21 +98,25 @@ func (s *Server) handleCSS(w http.ResponseWriter, _ *http.Request) {
 
 // writeCSSImport dynamically writes the CSS import statement to the provided writer.
 func writeCSSImport(w io.Writer, hostname string) error {
-	_, err := fmt.Fprintf(w, `<!doctype html><html lang="en"><head><link rel="stylesheet" type="text/css" href="http://%s/css"></head><body>`, hostname)
-	return err
+	cssTemplate, err := template.New("cssImportLine").Parse(`<!doctype html><html lang="en"><head><link rel="stylesheet" type="text/css" href="http://{{ . }}/css"></head><body>`)
+	if err != nil {
+		return err
+	}
+	cssTemplate.Execute(w, hostname)
+	return nil
 }
 
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	// startTime := time.Now()
 	// s.Logger.Info("Recieved request at URI: ", r.URL)
-	err := writeCSSImport(w, s.Hostname) // TODO grab the hostname from server config
+	err := writeCSSImport(w, s.Hostname)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	path := strings.TrimPrefix(r.URL.Path, "/"+s.BaseDir+"/`")
 
 	// filePath, err := s.getSafeFilePath(path)
-	_, err = s.getSafeFilePath(path)
+	_, err = s.getSafeFilePath(path) // This just checks if directory is within target
 	if err != nil {
 		// s.Logger.Warn("Error with request", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -150,7 +155,7 @@ func (s *Server) Start() error {
 	// Register routes
 	s.registerRoutes()
 
-	fmt.Printf("Server listening on http://localhost%s\n", s.httpServer.Addr)
+	fmt.Printf("Server listening on http://%s %s\n", s.Hostname, s.httpServer.Addr)
 	return s.httpServer.ListenAndServe()
 }
 
