@@ -22,7 +22,7 @@ func main() {
 
 	domInstance := dom.NewDOM()
 	srv, err := server.NewServer(domInstance)
-	if err != nil { // TODO format errors and have error types (perhaps errors package)
+	if err != nil {
 		log.Fatal(err.Error())
 	}
 
