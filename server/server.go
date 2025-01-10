@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/justyntemme/gobolt/dom"
+	t "github.com/justyntemme/gobolt/template"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -52,15 +53,8 @@ func (s *Server) GenerateNavigationHTML() error {
 		}
 
 		// Define a simple template for the navigation bar
-		navTemplate := `
-		<nav>
-			<ul>
-			{{- range . }}
-				<li><a href="{{ .URI }}">{{ .Title }}</a></li>
-			{{- end }}
-			</ul>
-		</nav>
-		`
+		// baseTemplate := t.ReturnBaseTemplate()
+		navTemplate := t.ReturnNavTemplate()
 
 		// Parse the template
 		tmpl, err := template.New("navigation").Parse(navTemplate)
@@ -146,6 +140,7 @@ func (s *Server) registerRoutes() {
 
 func (s *Server) getSafeFilePath(path string) (string, error) {
 	cleanPath := filepath.Clean(path)
+	// TODO Implement symlink checking
 
 	absPath := filepath.Join(s.BaseDir, cleanPath)
 
