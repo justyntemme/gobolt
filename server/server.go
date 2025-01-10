@@ -15,6 +15,7 @@ import (
 
 	"github.com/justyntemme/gobolt/dom"
 	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // Global variable to hold the generated navigation HTML
@@ -88,7 +89,7 @@ func (s *Server) getPageTitle(uri string) string {
 	if uri == "/" {
 		return "Home"
 	}
-	return cases.Title(strings.Trim(path.Base(uri), "/"))
+	return cases.Title(language.Und).String(strings.Trim(path.Base(uri), "/"))
 }
 
 // ServerConfig holds configuration values for the server.
