@@ -175,27 +175,18 @@ func (s *Server) handleCSS(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// writeCSSImport dynamically writes the CSS import statement to the provided writer.
-func writeCSSImport(w io.Writer, hostname string) error {
-	cssTemplate, err := template.New("cssImportLine").Parse(`<!doctype html><html lang="en"><head><link rel="stylesheet" type="text/css" href="http://{{ . }}/css"></head><body>`)
-	if err != nil {
-		return err
-	}
-	cssTemplate.Execute(w, hostname)
-	return nil
+func getCSSImportString(hostname string) string {
+	// Generate the CSS import statement as a string
+	return fmt.Sprintf(`<link rel="stylesheet" type="text/css" href="http://%s/css">`, hostname)
 }
 
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	// startTime := time.Now()
 	// s.Logger.Info("Recieved request at URI: ", r.URL)
-	err := writeCSSImport(w, s.Hostname)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
 	path := strings.TrimPrefix(r.URL.Path, "/"+s.BaseDir+"/`")
 
 	// filePath, err := s.getSafeFilePath(path)
-	_, err = s.getSafeFilePath(path) // This just checks if directory is within target
+	_, err := s.getSafeFilePath(path) // This just checks if directory is within target
 	if err != nil {
 		// s.Logger.Warn("Error with request", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -217,11 +208,50 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+
 	// w.Header().Set("Content-Type", "text/html")
-	fmt.Fprintln(w, navigationHTML)
-	fmt.Fprintln(w, page.HTML)
+	data := struct {
+		CSSImport   string
+		Navigation  template.HTML
+		PageContent template.HTML
+	}{
+		CSSImport:   getCSSImportString(s.Hostname),
+		Navigation:  template.HTML(navigationHTML),
+		PageContent: template.HTML(page.HTML),
+	}
+
+	// Define or load the main template
+	mainTemplate := `
+	<!doctype html>
+	<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>{{ .PageContent }}</title>
+		{{ .CSSImport }}
+	</head>
+	<body>
+		{{ .Navigation }}
+		<div>{{ .PageContent }}</div>
+	</body>
+	</html>
+	`
+
+	tmpl, err := template.New("main").Parse(mainTemplate)
+	if err != nil {
+		http.Error(w, "Failed to parse template", http.StatusInternalServerError)
+		return
+	}
+
+	// Set content type and render the response
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.Execute(w, data); err != nil {
+		http.Error(w, "Failed to render page", http.StatusInternalServerError)
+	}
+	/// TODO make this the generic page data struct. export logic to another function
+	//	fmt.Fprintln(w, navigationHTML)
+	//	fmt.Fprintln(w, page.HTML)
 	// s.Logger.Debug(page.HTML)
-	fmt.Fprintln(w, "</body></html>")
 
 	/*duration := time.Since(startTime)
 	s.ServerConfig.Logger.Infof(
