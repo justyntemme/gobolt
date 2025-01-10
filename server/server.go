@@ -170,11 +170,6 @@ func (s *Server) handleCSS(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-func getCSSImportString(hostname string) template.HTML {
-	// Generate the CSS import statement as a string
-	return template.HTML(fmt.Sprintf(`<link rel="stylesheet" type="text/css" href="http://%s/css">`, hostname))
-}
-
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	// startTime := time.Now()
 	// s.Logger.Info("Recieved request at URI: ", r.URL)
@@ -203,9 +198,8 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	cssImport := getCSSImportString(s.Hostname)
+	cssImport := t.ReturnCSSImportTemplate(s.Hostname)
 
-	// w.Header().Set("Content-Type", "text/html")
 	data := struct {
 		CSSImport   template.HTML
 		Navigation  template.HTML
@@ -218,24 +212,7 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 		Hostname:    s.Hostname,
 	}
 
-	// Define or load the main template
-	mainTemplate := `
-	<!doctype html>
-	<html lang="en">
-	<head>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<title>{{ .Hostname }}</title>
-		{{ .CSSImport }}
-	</head>
-	<body>
-		{{ .Navigation }}
-		<div>{{ .PageContent }}</div>
-	</body>
-	</html>
-	`
-
-	tmpl, err := template.New("main").Parse(mainTemplate)
+	tmpl, err := template.New("main").Parse(t.ReturnBaseTemplate())
 	if err != nil {
 		http.Error(w, "Failed to parse template", http.StatusInternalServerError)
 		return
@@ -246,10 +223,6 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, "Failed to render page", http.StatusInternalServerError)
 	}
-	/// TODO make this the generic page data struct. export logic to another function
-	//	fmt.Fprintln(w, navigationHTML)
-	//	fmt.Fprintln(w, page.HTML)
-	// s.Logger.Debug(page.HTML)
 
 	/*duration := time.Since(startTime)
 	s.ServerConfig.Logger.Infof(
@@ -262,6 +235,16 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 func (s *Server) Start() error {
 	// Register routes
 	s.registerRoutes()
+
+	err := s.GenerateNavigationHTML()
+	if err != nil {
+		return err
+	}
+
+	err = dom.LoadCSS(s.BaseDir + "/styles.css")
+	if err != nil {
+		return err
+	}
 
 	fmt.Printf("Server listening on http://%s %s\n", s.Hostname, s.httpServer.Addr)
 	return s.httpServer.ListenAndServe()

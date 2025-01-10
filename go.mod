@@ -6,6 +6,8 @@ replace github.com/justyntemme/gobolt/server => /Users/justyntemme/Documents/cod
 
 replace github.com/justyntemme/gobolt/dom => /Users/justyntemme/Documents/code/gobolt/dom
 
+replace github.com/justyntemme/gobolt/template => /Users/justyntemme/Documents/code/gobolt/template
+
 require (
 	github.com/gomarkdown/markdown v0.0.0-20241205020045-f7e15b2f3e62
 	github.com/sirupsen/logrus v1.9.3
