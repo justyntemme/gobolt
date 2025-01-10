@@ -32,6 +32,11 @@ func main() {
 		log.Fatalf("Error loading markdown content: %v", err)
 	}
 
+	err = srv.GenerateNavigationHTML()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
 	err = dom.LoadCSS(srv.BaseDir + "/styles.css")
 	if err != nil {
 		logger.Fatalf("Unable to load css: error: %s", err)

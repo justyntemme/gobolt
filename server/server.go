@@ -1,17 +1,95 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"html/template"
 	"io"
 	"net/http"
+	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/justyntemme/gobolt/dom"
+	"golang.org/x/text/cases"
 )
+
+// Global variable to hold the generated navigation HTML
+var (
+	navigationHTML string
+	once           sync.Once
+)
+
+// NavData holds navigation link information
+type NavData struct {
+	Title string
+	URI   string
+}
+
+// GenerateNavigationHTML dynamically generates the navigation bar based on site content.
+func (s *Server) GenerateNavigationHTML() error {
+	var loadErr error
+
+	once.Do(func() {
+		// Generate navigation links for all top-level pages
+		navLinks := []NavData{}
+		for uri := range s.DOM.Pages {
+			// Consider top-level URIs only (e.g., "/about", not "/about/team")
+			// if path.Dir(uri) == "/" || uri == "/"  // TODO Add check for only top level pages
+			// by checking if the len after split by '/' is greater than 1
+
+			title := s.getPageTitle(uri)
+			uri = strings.TrimPrefix(uri, "content")
+			fmt.Print(uri)
+			navLinks = append(navLinks, NavData{
+				Title: title,
+				URI:   uri,
+			})
+		}
+
+		// Define a simple template for the navigation bar
+		navTemplate := `
+		<nav>
+			<ul>
+			{{- range . }}
+				<li><a href="{{ .URI }}">{{ .Title }}</a></li>
+			{{- end }}
+			</ul>
+		</nav>
+		`
+
+		// Parse the template
+		tmpl, err := template.New("navigation").Parse(navTemplate)
+		if err != nil {
+			loadErr = fmt.Errorf("failed to parse navigation template: %w", err)
+			return
+		}
+
+		// Execute the template with the navigation links
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, navLinks); err != nil {
+			loadErr = fmt.Errorf("failed to execute navigation template: %w", err)
+			return
+		}
+
+		// Store the generated HTML
+		navigationHTML = buf.String()
+		fmt.Println("Navigation HTML generated successfully.")
+	})
+
+	return loadErr
+}
+
+// getPageTitle derives a page title from the URI (optional utility function)
+func (s *Server) getPageTitle(uri string) string {
+	if uri == "/" {
+		return "Home"
+	}
+	return cases.Title(strings.Trim(path.Base(uri), "/"))
+}
 
 // ServerConfig holds configuration values for the server.
 type ServerConfig struct {
@@ -138,7 +216,8 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	w.Header().Set("Content-Type", "text/html")
+	// w.Header().Set("Content-Type", "text/html")
+	fmt.Fprintln(w, navigationHTML)
 	fmt.Fprintln(w, page.HTML)
 	// s.Logger.Debug(page.HTML)
 	fmt.Fprintln(w, "</body></html>")
