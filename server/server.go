@@ -15,6 +15,7 @@ import (
 
 	"github.com/justyntemme/gobolt/dom"
 	t "github.com/justyntemme/gobolt/template"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -31,6 +32,16 @@ type NavData struct {
 	URI   string
 }
 
+func (s *Server) isTopLevel(uri string) bool {
+	sp := strings.Split(uri, "/")
+	// pop first element as its empty str
+	if sp[0] == "" {
+		sp = sp[1:]
+	}
+	s.Logger.Debugf("isTopLevel: uri is %s, and len is %d", sp, len(sp))
+	return len(sp) == 1
+}
+
 // GenerateNavigationHTML dynamically generates the navigation bar based on site content.
 func (s *Server) GenerateNavigationHTML() error {
 	var loadErr error
@@ -42,14 +53,21 @@ func (s *Server) GenerateNavigationHTML() error {
 			// Consider top-level URIs only (e.g., "/about", not "/about/team")
 			// if path.Dir(uri) == "/" || uri == "/"  // TODO Add check for only top level pages
 			// by checking if the len after split by '/' is greater than 1
-
-			title := s.getPageTitle(uri)
 			uri = strings.TrimPrefix(uri, "content")
-			fmt.Print(uri)
-			navLinks = append(navLinks, NavData{
-				Title: title,
-				URI:   uri,
-			})
+
+			topLevel := s.isTopLevel(uri)
+			if topLevel {
+				title := s.getPageTitle(uri)
+				fmt.Print(uri)
+				navLinks = append(navLinks, NavData{
+					Title: title,
+					URI:   uri,
+				})
+
+			} else {
+				continue
+			}
+
 		}
 
 		// Define a simple template for the navigation bar
@@ -92,6 +110,7 @@ type ServerConfig struct {
 	DOM      *dom.DOM
 	Hostname string
 	Port     string
+	Logger   *logrus.Logger
 }
 
 type Server struct {
@@ -102,6 +121,8 @@ type Server struct {
 
 func NewServer(dom *dom.DOM) (*Server, error) {
 	mux := http.NewServeMux()
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
 	// TODO add config package to read yaml files or params for ServerConfig Values
 	c, err := LoadConfig()
 	if err != nil {
@@ -113,6 +134,7 @@ func NewServer(dom *dom.DOM) (*Server, error) {
 			DOM:      dom,
 			Hostname: c.Hostname,
 			Port:     c.Port,
+			Logger:   logger,
 		},
 		mux: mux,
 		httpServer: &http.Server{
@@ -171,14 +193,13 @@ func (s *Server) handleCSS(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
-	// startTime := time.Now()
-	// s.Logger.Info("Recieved request at URI: ", r.URL)
+	startTime := time.Now()
+	s.Logger.Debug("Recieved request at URI: ", r.URL)
 	path := strings.TrimPrefix(r.URL.Path, "/"+s.BaseDir+"/`")
 
-	// filePath, err := s.getSafeFilePath(path)
-	_, err := s.getSafeFilePath(path) // This just checks if directory is within target
+	filePath, err := s.getSafeFilePath(path)
 	if err != nil {
-		// s.Logger.Warn("Error with request", err)
+		s.Logger.Warn("Error with request", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -224,12 +245,12 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to render page", http.StatusInternalServerError)
 	}
 
-	/*duration := time.Since(startTime)
-	s.ServerConfig.Logger.Infof(
+	duration := time.Since(startTime)
+	s.Logger.Infof(
 		"Request processed in %s for path: %s with filepath %s",
 		duration,
 		r.URL.Path,
-		filePath) */
+		filePath)
 }
 
 func (s *Server) Start() error {
