@@ -13,18 +13,21 @@ func LoadConfig() (*ServerConfig, error) {
 	// Define default values
 	defaultBaseDir := "./content"
 	defaultPort := ":80" // Port must have :
+	defaultHostname := "localhost"
 
 	// Command-line flags
 	baseDir := flag.String("baseDir", defaultBaseDir, "Base directory for content")
 	port := flag.String("port", defaultPort, "Port to listen on")
-	configFile := flag.String("config", "./config.yaml", "Path to YAML configuration file")
 
+	configFile := flag.String("config", "./config.yaml", "Path to YAML configuration file")
+	hostname := flag.String("hostname", defaultHostname, "hostname to listen on")
 	flag.Parse()
 
 	// Start with default config
 	config := &ServerConfig{
-		BaseDir: *baseDir,
-		Port:    *port,
+		BaseDir:  *baseDir,
+		Port:     *port,
+		Hostname: *hostname,
 	}
 
 	// Load and merge configuration from YAML file, if it exists

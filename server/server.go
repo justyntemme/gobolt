@@ -1,16 +1,108 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
+	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/justyntemme/gobolt/dom"
+	t "github.com/justyntemme/gobolt/template"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
+
+// Global variable to hold the generated navigation HTML
+var (
+	navigationHTML string
+	once           sync.Once
+)
+
+// NavData holds navigation link information
+type NavData struct {
+	Title string
+	URI   string
+}
+
+func (s *Server) isTopLevel(uri string) bool {
+	sp := strings.Split(uri, "/")
+	// pop first element as its empty str
+	if sp[0] == "" {
+		sp = sp[1:]
+	}
+	s.Logger.Debugf("isTopLevel: uri is %s, and len is %d", sp, len(sp))
+	return len(sp) == 1
+}
+
+// GenerateNavigationHTML dynamically generates the navigation bar based on site content.
+func (s *Server) GenerateNavigationHTML() error {
+	var loadErr error
+
+	once.Do(func() {
+		// Generate navigation links for all top-level pages
+		navLinks := []NavData{}
+		for uri := range s.DOM.Pages {
+			// Consider top-level URIs only (e.g., "/about", not "/about/team")
+			// if path.Dir(uri) == "/" || uri == "/"  // TODO Add check for only top level pages
+			// by checking if the len after split by '/' is greater than 1
+			uri = strings.TrimPrefix(uri, "content")
+
+			topLevel := s.isTopLevel(uri)
+			if topLevel {
+				title := s.getPageTitle(uri)
+				fmt.Print(uri)
+				navLinks = append(navLinks, NavData{
+					Title: title,
+					URI:   uri,
+				})
+
+			} else {
+				continue
+			}
+
+		}
+
+		// Define a simple template for the navigation bar
+		// baseTemplate := t.ReturnBaseTemplate()
+		navTemplate := t.ReturnNavTemplate()
+
+		// Parse the template
+		tmpl, err := template.New("navigation").Parse(navTemplate)
+		if err != nil {
+			loadErr = fmt.Errorf("failed to parse navigation template: %w", err)
+			return
+		}
+
+		// Execute the template with the navigation links
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, navLinks); err != nil {
+			loadErr = fmt.Errorf("failed to execute navigation template: %w", err)
+			return
+		}
+
+		// Store the generated HTML
+		navigationHTML = buf.String()
+		fmt.Println("Navigation HTML generated successfully.")
+	})
+
+	return loadErr
+}
+
+// getPageTitle derives a page title from the URI (optional utility function)
+func (s *Server) getPageTitle(uri string) string {
+	if uri == "/" {
+		return "Home"
+	}
+	return cases.Title(language.Und).String(strings.Trim(path.Base(uri), "/"))
+}
 
 // ServerConfig holds configuration values for the server.
 type ServerConfig struct {
@@ -18,6 +110,7 @@ type ServerConfig struct {
 	DOM      *dom.DOM
 	Hostname string
 	Port     string
+	Logger   *logrus.Logger
 }
 
 type Server struct {
@@ -28,6 +121,8 @@ type Server struct {
 
 func NewServer(dom *dom.DOM) (*Server, error) {
 	mux := http.NewServeMux()
+	logger := logrus.New()
+	logger.SetLevel(logrus.DebugLevel)
 	// TODO add config package to read yaml files or params for ServerConfig Values
 	c, err := LoadConfig()
 	if err != nil {
@@ -39,6 +134,7 @@ func NewServer(dom *dom.DOM) (*Server, error) {
 			DOM:      dom,
 			Hostname: c.Hostname,
 			Port:     c.Port,
+			Logger:   logger,
 		},
 		mux: mux,
 		httpServer: &http.Server{
@@ -66,6 +162,7 @@ func (s *Server) registerRoutes() {
 
 func (s *Server) getSafeFilePath(path string) (string, error) {
 	cleanPath := filepath.Clean(path)
+	// TODO Implement symlink checking
 
 	absPath := filepath.Join(s.BaseDir, cleanPath)
 
@@ -95,22 +192,14 @@ func (s *Server) handleCSS(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
-// writeCSSImport dynamically writes the CSS import statement to the provided writer.
-func writeCSSImport(w io.Writer, hostname string) error {
-	_, err := fmt.Fprintf(w, `<!doctype html><html lang="en"><head><link rel="stylesheet" type="text/css" href="http://%s/css"></head><body>`, hostname)
-	return err
-}
-
 func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
-	// startTime := time.Now()
-	// s.Logger.Info("Recieved request at URI: ", r.URL)
-	writeCSSImport(w, "localhost")
-	path := strings.TrimPrefix(r.URL.Path, "/content/`")
+	startTime := time.Now()
+	s.Logger.Debug("Recieved request at URI: ", r.URL)
+	path := strings.TrimPrefix(r.URL.Path, "/"+s.BaseDir+"/`")
 
-	// filePath, err := s.getSafeFilePath(path)
-	_, err := s.getSafeFilePath(path)
+	filePath, err := s.getSafeFilePath(path)
 	if err != nil {
-		// s.Logger.Warn("Error with request", err)
+		s.Logger.Warn("Error with request", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -130,24 +219,55 @@ func (s *Server) handleContent(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprintln(w, page.HTML)
-	// s.Logger.Debug(page.HTML)
-	fmt.Fprintln(w, "</body></html>")
+	cssImport := t.ReturnCSSImportTemplate(s.Hostname)
 
-	/*duration := time.Since(startTime)
-	s.ServerConfig.Logger.Infof(
+	data := struct {
+		CSSImport   template.HTML
+		Navigation  template.HTML
+		PageContent template.HTML
+		Hostname    string
+	}{
+		CSSImport:   template.HTML(cssImport),
+		Navigation:  template.HTML(navigationHTML),
+		PageContent: template.HTML(page.HTML),
+		Hostname:    s.Hostname,
+	}
+
+	tmpl, err := template.New("main").Parse(t.ReturnBaseTemplate())
+	if err != nil {
+		http.Error(w, "Failed to parse template", http.StatusInternalServerError)
+		return
+	}
+
+	// Set content type and render the response
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := tmpl.Execute(w, data); err != nil {
+		http.Error(w, "Failed to render page", http.StatusInternalServerError)
+	}
+
+	duration := time.Since(startTime)
+	s.Logger.Infof(
 		"Request processed in %s for path: %s with filepath %s",
 		duration,
 		r.URL.Path,
-		filePath) */
+		filePath)
 }
 
 func (s *Server) Start() error {
 	// Register routes
 	s.registerRoutes()
 
-	fmt.Printf("Server listening on http://localhost%s\n", s.httpServer.Addr)
+	err := s.GenerateNavigationHTML()
+	if err != nil {
+		return err
+	}
+
+	err = dom.LoadCSS(s.BaseDir + "/styles.css")
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Server listening on http://%s %s\n", s.Hostname, s.httpServer.Addr)
 	return s.httpServer.ListenAndServe()
 }
 

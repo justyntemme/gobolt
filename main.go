@@ -32,10 +32,6 @@ func main() {
 		log.Fatalf("Error loading markdown content: %v", err)
 	}
 
-	err = dom.LoadCSS(srv.BaseDir + "/styles.css")
-	if err != nil {
-		logger.Fatalf("Unable to load css: error: %s", err)
-	}
 	go func() {
 		if err := srv.Start(); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Error starting server: %v\n", err)
