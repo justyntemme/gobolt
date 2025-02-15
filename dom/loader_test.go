@@ -107,6 +107,7 @@ func TestDOM_LoadMarkdown(t *testing.T) {
 						}
 					}
 				}
+				// TODO add tests for specific rendering objects {paragraph, header, CSS}
 				if tt.args.baseDir == tempInvalidDir {
 					html := tt.fields.Pages["/invalid"].HTML
 					hash := md5.Sum([]byte(html))
