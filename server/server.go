@@ -53,6 +53,7 @@ func (s *Server) GenerateNavigationHTML() error {
 			// Consider top-level URIs only (e.g., "/about", not "/about/team")
 			// if path.Dir(uri) == "/" || uri == "/"  // TODO Add check for only top level pages
 			// by checking if the len after split by '/' is greater than 1
+			// TODO remove the hard coded value of content
 			uri = strings.TrimPrefix(uri, "content")
 
 			topLevel := s.isTopLevel(uri)
