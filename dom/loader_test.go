@@ -1,6 +1,8 @@
 package dom
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"testing"
@@ -94,18 +96,27 @@ func TestDOM_LoadMarkdown(t *testing.T) {
 				tt.cleanup()
 			}
 
-			// Additional assertions for successful cases // Also should add content check for invalid cases
-			// if !tt.wantErr && err == nil {
-			// 	// Check if valid files were properly loaded
-			// 	if tt.args.baseDir == tempValidDir {
-			// 		expectedPaths := []string{"/valid"}
-			// 		for _, path := range expectedPaths {
-			// 			if _, exists := d.Pages[path]; !exists {
-			// 				t.Errorf("Expected page at path %s to exist in DOM", path)
-			// 			}
-			// 		}
-			// 	}
-			// }
+			//Additional assertions for successful cases // Also should add content check for invalid cases
+			if !tt.wantErr && err == nil {
+				// Check if valid files were properly loaded
+				if tt.args.baseDir == tempValidDir {
+					expectedPaths := []string{"/valid"}
+					for _, path := range expectedPaths {
+						if _, exists := d.Pages[path]; !exists {
+							t.Errorf("Expected page at path %s to exist in DOM", path)
+						}
+					}
+				}
+				if tt.args.baseDir == tempInvalidDir {
+					html := tt.fields.Pages["/invalid"].HTML
+					hash := md5.Sum([]byte(html))
+					hashString := hex.EncodeToString(hash[:])
+					if hashString != "d91a8480cda772fd34e02fb61e1a226d" {
+						t.Errorf("Expected Specific hash value for invalid string")
+					}
+
+				}
+			}
 		})
 	}
 }
